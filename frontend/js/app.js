@@ -1,7 +1,11 @@
 /* AegisBoard SPA — router, API client, shell */
+/* API_BASE comes from js/config.js (window.AEGISBOARD_API). Empty means
+   same-origin, i.e. the frontend is served by the backend itself (local dev
+   or the Render URL used directly). */
+const API_BASE = (window.AEGISBOARD_API || "").replace(/\/+$/, "");
 const api = {
   async get(path) {
-    const r = await fetch(path);
+    const r = await fetch(API_BASE + path);
     if (!r.ok) throw new Error(`GET ${path}: ${r.status}`);
     return r.json();
   },
@@ -13,7 +17,7 @@ const api = {
     for (const [name, file] of Object.entries(fileInputs)) {
       if (file) fd.append(name, file, file.name);
     }
-    const r = await fetch("/api/run", { method: "POST", body: fd });
+    const r = await fetch(API_BASE + "/api/run", { method: "POST", body: fd });
     return r.json();
   },
 };

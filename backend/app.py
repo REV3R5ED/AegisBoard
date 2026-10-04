@@ -12,6 +12,7 @@ from collections import deque
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -20,6 +21,15 @@ from . import registry, runner
 ROOT = Path(__file__).resolve().parent.parent
 
 app = FastAPI(title="AegisBoard", version="1.0.0")
+
+# Allow the Vercel-hosted frontend to call this API from any *.vercel.app origin.
+# (Local dev serves the frontend from this same backend, so it needs no CORS.)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Recent tool executions (in-memory, newest first, capped).
 HISTORY: deque[dict] = deque(maxlen=50)

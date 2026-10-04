@@ -1,0 +1,22 @@
+# Render Blueprint — AegisBoard backend.
+# Deploy: Render dashboard → New → Blueprint → select the AegisBoard repo.
+# This installs the FastAPI backend plus all 8 DFIR tool CLIs, then serves
+# the API with uvicorn. The static frontend is deployed separately on Vercel.
+services:
+  - type: web
+    name: aegisboard-backend
+    runtime: python
+    plan: free
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      pip install
+      git+https://github.com/REV3R5ED/PhishScope.git
+      git+https://github.com/REV3R5ED/MetaTrace.git
+      git+https://github.com/REV3R5ED/HuntForge.git
+      git+https://github.com/REV3R5ED/LogLens.git
+      git+https://github.com/REV3R5ED/NetScope.git
+      git+https://github.com/REV3R5ED/SentinelKit.git
+      git+https://github.com/REV3R5ED/AegisForge.git
+      git+https://github.com/REV3R5ED/AutoOPS.git
+    startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/tools

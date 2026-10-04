@@ -24,6 +24,30 @@ uvicorn backend.app:app --host 127.0.0.1 --port 8077
 
 Then open http://127.0.0.1:8077.
 
+## Screenshots
+
+### Dashboard — engine overview, KPIs, recent run history
+
+![AegisBoard dashboard](docs/screenshots/01-dashboard.png)
+
+### Tool workspaces — pick an engine, run it, get results
+
+| PhishScope — analyze a `.eml` | MetaTrace — inspect an image |
+|---|---|
+| ![PhishScope workspace](docs/screenshots/02-phishscope.png) | ![MetaTrace workspace](docs/screenshots/03-metatrace.png) |
+
+| HuntForge — Sysmon detections | LogLens — log analysis |
+|---|---|
+| ![HuntForge workspace](docs/screenshots/04-huntforge.png) | ![LogLens workspace](docs/screenshots/05-loglens.png) |
+
+| NetScope — classify an address | SentinelKit — extract IOCs |
+|---|---|
+| ![NetScope workspace](docs/screenshots/06-netscope.png) | ![SentinelKit workspace](docs/screenshots/07-sentinelkit.png) |
+
+| AegisForge — DFIR cases | AutoOPS — operational validation |
+|---|---|
+| ![AegisForge workspace](docs/screenshots/08-aegisforge.png) | ![AutoOPS workspace](docs/screenshots/09-autoops.png) |
+
 ## How it works
 
 - The dashboard probes each engine's CLI at startup (`--version`) and shows live online/offline status.

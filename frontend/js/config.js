@@ -3,4 +3,4 @@
      window.AEGISBOARD_API = "https://aegisboard-backend.onrender.com";
    Leave it "" when the frontend is served by the backend itself
    (local dev with uvicorn, or opening the Render URL directly). */
-window.AEGISBOARD_API = "";
+window.AEGISBOARD_API = "https://aegisboard-backend.onrender.com";

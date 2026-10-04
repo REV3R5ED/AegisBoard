@@ -18,6 +18,8 @@ A technician opens the site, picks a tool, and uses it — no CLI required.
 
 **[aegisboard-frontend.vercel.app](https://aegisboard-frontend.vercel.app)** — the dashboard running live in your browser: frontend on Vercel, API on Render, all eight engines online. Pick a tool and run it, no install needed.
 
+> ⏳ Note: the demo backend runs on Render's free tier, which sleeps after ~15 minutes idle — the first visit can take ~30 seconds while all eight engines wake up.
+
 ## Run it
 
 ```bash

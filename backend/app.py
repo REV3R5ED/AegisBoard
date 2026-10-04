@@ -1,4 +1,4 @@
-"""AegisBoard — unified DFIR dashboard over the 8 specialist engines.
+"""AegisBoard — unified web UI for the 8 DFIR specialist engines.
 
 Run:  uvicorn backend.app:app --host 127.0.0.1 --port 8077
 Then: http://127.0.0.1:8077
@@ -7,6 +7,8 @@ Then: http://127.0.0.1:8077
 from __future__ import annotations
 
 import json
+import time
+from collections import deque
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, UploadFile
@@ -16,28 +18,11 @@ from fastapi.staticfiles import StaticFiles
 from . import registry, runner
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA = ROOT / "data" / "blackecho"
 
 app = FastAPI(title="AegisBoard", version="1.0.0")
 
-
-def _case_payload() -> dict:
-    def load(name: str):
-        p = DATA / name
-        return json.loads(p.read_text()) if p.exists() else None
-
-    findings: list[dict] = []
-    for tool_file in ["aegisforge", "autoops", "huntforge", "loglens",
-                      "metatrace", "netscope", "phishscope", "sentinelkit"]:
-        recs = load(f"{tool_file}.json") or []
-        findings.extend(recs)
-    return {
-        "incident": load("incident.json"),
-        "findings": findings,
-        "timeline": load("timeline.json") or [],
-        "relationships": load("relationships.json") or [],
-        "scoring": load("results.json") or {},
-    }
+# Recent tool executions (in-memory, newest first, capped).
+HISTORY: deque[dict] = deque(maxlen=50)
 
 
 @app.get("/api/tools")
@@ -53,9 +38,9 @@ def api_status():
     return {"tools": statuses}
 
 
-@app.get("/api/case")
-def api_case():
-    return _case_payload()
+@app.get("/api/history")
+def api_history():
+    return {"runs": list(HISTORY)}
 
 
 @app.post("/api/run")
@@ -77,6 +62,15 @@ async def api_run(
     for f in files:
         uploads[f.name] = (f.filename or "upload", await f.read())
     result = runner.execute(tool_def, action_def, fields, uploads)
+    HISTORY.appendleft({
+        "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "tool": tool,
+        "tool_name": tool_def["name"],
+        "action": action_def["label"],
+        "ok": result.get("ok", False),
+        "exit_code": result.get("exit_code"),
+        "duration_ms": result.get("duration_ms"),
+    })
     return JSONResponse(result)
 
 

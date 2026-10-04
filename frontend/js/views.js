@@ -1,4 +1,4 @@
-/* AegisBoard views — dashboard, investigation, tool pages */
+/* AegisBoard views — dashboard + tool workspaces */
 
 function toolColor(id) {
   return (state.toolMap[id] && state.toolMap[id].color) || "#22d3ee";
@@ -9,26 +9,34 @@ function toolName(id) {
 
 /* ================= Dashboard ================= */
 async function renderDashboard(view, crumb) {
-  crumb.innerHTML = `<b>Dashboard</b> · fleet overview`;
+  crumb.innerHTML = `<b>Dashboard</b> · engine overview`;
   view.innerHTML = `
     <div class="page-head">
-      <div class="page-title">Security operations overview</div>
-      <div class="page-sub">Eight specialist engines, one investigation surface.</div>
+      <div class="page-title">Security toolkit</div>
+      <div class="page-sub">Eight specialist engines behind one clean interface. Pick a tool and go.</div>
     </div>
     <div class="grid kpi">
-      <div class="card"><h3>Case coverage</h3><div class="kpi-value kpi-ok">100%</div><div class="kpi-sub">8/8 indicators · BLACKECHO-001</div></div>
-      <div class="card"><h3>Findings</h3><div class="kpi-value">26</div><div class="kpi-sub">normalized across all engines</div></div>
-      <div class="card"><h3>Engines online</h3><div class="kpi-value kpi-accent" id="kpi-engines">…</div><div class="kpi-sub">live CLI availability</div></div>
-      <div class="card"><h3>Relationships</h3><div class="kpi-value">6<span style="font-size:16px;color:var(--text-3)">/6</span></div><div class="kpi-sub">cross-tool links reconstructed</div></div>
+      <div class="card"><h3>Engines online</h3><div class="kpi-value kpi-ok" id="kpi-engines">…</div><div class="kpi-sub">live CLI availability</div></div>
+      <div class="card"><h3>Actions available</h3><div class="kpi-value" id="kpi-actions">…</div><div class="kpi-sub">across all engines</div></div>
+      <div class="card"><h3>Runs this session</h3><div class="kpi-value kpi-accent" id="kpi-runs">0</div><div class="kpi-sub">tool executions</div></div>
+      <div class="card"><h3>Success rate</h3><div class="kpi-value" id="kpi-rate">—</div><div class="kpi-sub">of executed runs</div></div>
     </div>
     <div class="section-title">Engines</div>
-    <div class="section-sub">Click an engine to run it interactively.</div>
+    <div class="section-sub">Click an engine to open its workspace.</div>
     <div class="grid tools" id="tool-grid"></div>
-    <div class="section-title">Latest case activity</div>
-    <div class="card"><div class="timeline" id="mini-timeline"></div></div>`;
+    <div class="section-title">Recent activity</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="data"><thead><tr>
+        <th>Time</th><th>Engine</th><th>Action</th><th>Result</th><th>Duration</th>
+      </tr></thead><tbody id="hist-rows">
+        <tr><td colspan="5"><div class="empty" style="padding:24px">No runs yet — open an engine and run something.</div></td></tr>
+      </tbody></table>
+    </div>`;
 
   const online = Object.values(state.status).filter((s) => s.available).length;
   document.getElementById("kpi-engines").textContent = `${online}/8`;
+  document.getElementById("kpi-actions").textContent =
+    state.tools.reduce((n, t) => n + t.actions.length, 0);
 
   document.getElementById("tool-grid").innerHTML = state.tools.map((t) => {
     const st = state.status[t.id] || {};
@@ -44,206 +52,26 @@ async function renderDashboard(view, crumb) {
   }).join("");
 
   try {
-    const c = await api.get("/api/case");
-    const items = (c.timeline || []).slice(-5).reverse();
-    document.getElementById("mini-timeline").innerHTML = items.map((e) => `
-      <div class="tl-item" style="--tc:${toolColor(e.tool)}">
-        <div class="tl-time">${esc(e.timestamp)}</div>
-        <div class="tl-title">${esc(e.title)}</div>
-        <div class="tl-tool">${esc(toolName(e.tool))}</div>
-      </div>`).join("");
-  } catch (e) { /* case data optional */ }
+    const h = await api.get("/api/history");
+    const runs = h.runs || [];
+    document.getElementById("kpi-runs").textContent = runs.length;
+    if (runs.length) {
+      const okCount = runs.filter((r) => r.ok).length;
+      document.getElementById("kpi-rate").textContent =
+        `${Math.round((100 * okCount) / runs.length)}%`;
+      document.getElementById("hist-rows").innerHTML = runs.slice(0, 10).map((r) => `
+        <tr>
+          <td class="mono dim">${esc(r.ts.replace("T", " ").replace("Z", ""))}</td>
+          <td><span class="badge tool" style="color:${toolColor(r.tool)};border-color:${toolColor(r.tool)}55">${esc(r.tool_name)}</span></td>
+          <td>${esc(r.action)}</td>
+          <td>${r.ok ? '<span class="check">✓</span>' : `<span class="cross">✕ exit ${r.exit_code ?? "?"}</span>`}</td>
+          <td class="mono dim">${r.duration_ms ?? "—"} ms</td>
+        </tr>`).join("");
+    }
+  } catch (e) { /* history optional */ }
 }
 
-/* ================= Investigation ================= */
-let invTab = "timeline";
-let invCase = null;
-let findingFilter = { tool: "", severity: "", q: "" };
-
-async function renderInvestigation(view, crumb) {
-  crumb.innerHTML = `<b>Investigation</b> · BLACKECHO-001`;
-  view.innerHTML = `
-    <div class="page-head">
-      <div class="page-title">BLACKECHO-001 — phishing → persistence</div>
-      <div class="page-sub">Synthetic intrusion reconstructed end-to-end by all eight engines.</div>
-    </div>
-    <div class="grid kpi" id="inv-kpis"></div>
-    <div class="tabs">
-      <div class="tab ${invTab === "timeline" ? "active" : ""}" data-tab="timeline">Timeline</div>
-      <div class="tab ${invTab === "findings" ? "active" : ""}" data-tab="findings">Findings</div>
-      <div class="tab ${invTab === "graph" ? "active" : ""}" data-tab="graph">Relationships</div>
-      <div class="tab ${invTab === "report" ? "active" : ""}" data-tab="report">Report</div>
-    </div>
-    <div id="inv-body"><div class="card"><div class="skeleton" style="height:220px"></div></div></div>
-    <div class="scrim" id="scrim" onclick="closeDrawer()"></div>
-    <aside class="drawer" id="drawer"><div class="drawer-head"><b>Finding detail</b><button class="drawer-close" onclick="closeDrawer()">×</button></div><div class="drawer-body" id="drawer-body"></div></aside>`;
-
-  document.querySelectorAll(".tab").forEach((t) =>
-    t.addEventListener("click", () => { invTab = t.dataset.tab; renderInvestigation(view, crumb); })
-  );
-
-  try {
-    invCase = await api.get("/api/case");
-  } catch (e) {
-    document.getElementById("inv-body").innerHTML =
-      `<div class="empty"><div class="big">⚠️</div>Could not load case data.</div>`;
-    return;
-  }
-  const s = invCase.scoring || {};
-  document.getElementById("inv-kpis").innerHTML = `
-    <div class="card"><h3>Coverage</h3><div class="kpi-value kpi-ok">${s.coverage_pct ?? "—"}%</div><div class="kpi-sub">${s.recovered ?? "—"}/${s.expected_indicators ?? "—"} indicators</div></div>
-    <div class="card"><h3>False positives</h3><div class="kpi-value">${s.false_positives ?? "—"}</div><div class="kpi-sub">benign distractors elevated</div></div>
-    <div class="card"><h3>Misses</h3><div class="kpi-value">${(s.misses || []).length}</div><div class="kpi-sub">expected indicators not found</div></div>
-    <div class="card"><h3>Attack techniques</h3><div class="kpi-value" style="font-size:22px;padding-top:6px">${(invCase.incident?.attack_ids || []).join(" · ")}</div><div class="kpi-sub">MITRE ATT&CK</div></div>`;
-
-  const body = document.getElementById("inv-body");
-  if (invTab === "timeline") renderInvTimeline(body);
-  else if (invTab === "findings") renderInvFindings(body);
-  else if (invTab === "graph") renderInvGraph(body);
-  else renderInvReport(body);
-}
-
-function renderInvTimeline(body) {
-  const items = invCase.timeline || [];
-  body.innerHTML = `<div class="card"><div class="timeline">${items.map((e) => `
-    <div class="tl-item" style="--tc:${toolColor(e.tool)}">
-      <div class="tl-time">${esc(e.timestamp)}</div>
-      <div class="tl-title">${esc(e.title)}</div>
-      <div class="tl-tool">${esc(toolName(e.tool))} · ${esc(e.entity || "")}${e.severity ? ` · <span class="badge ${sevClass(e.severity)}">${esc(e.severity)}</span>` : ""}</div>
-    </div>`).join("")}</div></div>`;
-}
-
-function renderInvFindings(body) {
-  const findings = (invCase.findings || []).filter((f) => f.entity === "Finding");
-  const tools = [...new Set(findings.map((f) => f.source_tool))].sort();
-  body.innerHTML = `
-    <div class="filter-bar">
-      <select id="f-tool"><option value="">All engines</option>${tools.map((t) => `<option ${findingFilter.tool === t ? "selected" : ""} value="${t}">${esc(toolName(t))}</option>`).join("")}</select>
-      <select id="f-sev"><option value="">All severities</option>${["critical", "high", "medium", "low", "info"].map((s) => `<option ${findingFilter.severity === s ? "selected" : ""}>${s}</option>`).join("")}</select>
-      <input id="f-q" type="text" placeholder="Search findings…" value="${esc(findingFilter.q)}" style="flex:1;min-width:200px">
-    </div>
-    <div class="card" style="padding:0;overflow:hidden"><table class="data"><thead><tr>
-      <th>Severity</th><th>Finding</th><th>Engine</th><th>Technique</th><th>Confidence</th>
-    </tr></thead><tbody id="f-rows"></tbody></table></div>`;
-
-  const draw = () => {
-    const rows = findings
-      .filter((f) =>
-        (!findingFilter.tool || f.source_tool === findingFilter.tool) &&
-        (!findingFilter.severity || sevClass(f.severity) === findingFilter.severity) &&
-        (!findingFilter.q || JSON.stringify(f).toLowerCase().includes(findingFilter.q.toLowerCase()))
-      )
-      .sort((a, b) => (SEV_ORDER[sevClass(a.severity)] ?? 9) - (SEV_ORDER[sevClass(b.severity)] ?? 9));
-    document.getElementById("f-rows").innerHTML = rows.map((f, i) => `
-      <tr onclick="openFinding(${findings.indexOf(f)})">
-        <td><span class="badge ${sevClass(f.severity)}">${esc(f.severity || "info")}</span></td>
-        <td><b>${esc(f.title || f.id)}</b><div class="dim ellipsis">${esc(f.description || "")}</div></td>
-        <td><span class="badge tool" style="color:${toolColor(f.source_tool)};border-color:${toolColor(f.source_tool)}55">${esc(toolName(f.source_tool))}</span></td>
-        <td class="mono dim">${esc((f.attack_ids || []).join(", ") || "—")}</td>
-        <td class="mono">${f.confidence ?? "—"}</td>
-      </tr>`).join("") ||
-      `<tr><td colspan="5"><div class="empty">No findings match the filters.</div></td></tr>`;
-  };
-  document.getElementById("f-tool").onchange = (e) => { findingFilter.tool = e.target.value; draw(); };
-  document.getElementById("f-sev").onchange = (e) => { findingFilter.severity = e.target.value; draw(); };
-  document.getElementById("f-q").oninput = (e) => { findingFilter.q = e.target.value; draw(); };
-  draw();
-}
-
-function openFinding(idx) {
-  const f = (invCase.findings || []).filter((x) => x.entity === "Finding")[idx];
-  if (!f) return;
-  document.getElementById("drawer-body").innerHTML = `
-    <div style="margin-bottom:12px"><span class="badge ${sevClass(f.severity)}">${esc(f.severity || "info")}</span>
-    <span class="badge tool" style="color:${toolColor(f.source_tool)};border-color:${toolColor(f.source_tool)}55;margin-left:6px">${esc(toolName(f.source_tool))}</span></div>
-    <h3 style="margin-bottom:8px">${esc(f.title || f.id)}</h3>
-    <p class="dim" style="margin-bottom:14px">${esc(f.description || "")}</p>
-    <div class="json-view">${jsonHtml(f)}</div>`;
-  document.getElementById("drawer").classList.add("open");
-  document.getElementById("scrim").classList.add("open");
-}
-function closeDrawer() {
-  document.getElementById("drawer").classList.remove("open");
-  document.getElementById("scrim").classList.remove("open");
-}
-
-function renderInvGraph(body) {
-  const rels = invCase.relationships || [];
-  // Fixed layout: nodes positioned for readability
-  const nodes = [
-    { id: "email", label: "Phishing email", sub: "phishscope", x: 90, y: 60, c: "#38bdf8" },
-    { id: "attach", label: "Attachment", sub: "invoice-logo.jpg", x: 90, y: 200, c: "#a78bfa" },
-    { id: "endpoint", label: "Endpoint execution", sub: "huntforge", x: 340, y: 60, c: "#f472b6" },
-    { id: "persist", label: "Persistence", sub: "registry run key", x: 340, y: 200, c: "#f472b6" },
-    { id: "network", label: "Network activity", sub: "netscope", x: 590, y: 60, c: "#fbbf24" },
-    { id: "ioc", label: "IOC triage", sub: "sentinelkit", x: 590, y: 200, c: "#fb7185" },
-    { id: "case", label: "DFIR case", sub: "aegisforge", x: 340, y: 330, c: "#22d3ee" },
-  ];
-  const edges = [
-    ["email", "attach", "attachment"], ["email", "endpoint", "51 min"],
-    ["endpoint", "persist", "run key"], ["endpoint", "network", "C2-ish"],
-    ["network", "ioc", "enrich"], ["attach", "ioc", "hash"],
-    ["ioc", "case", "evidence"], ["endpoint", "case", "timeline"],
-  ];
-  const byId = Object.fromEntries(nodes.map((n) => [n.id, n]));
-  const W = 760, H = 400, NW = 150, NH = 52;
-  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
-  for (const [a, b, label] of edges) {
-    const A = byId[a], B = byId[b];
-    const x1 = A.x + NW / 2, y1 = A.y + NH / 2, x2 = B.x + NW / 2, y2 = B.y + NH / 2;
-    const mx = (x1 + x2) / 2;
-    svg += `<path class="g-edge" d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}" fill="none" marker-end="url(#arr)"/>`;
-    svg += `<text class="g-edge-label" x="${mx}" y="${(y1 + y2) / 2 - 6}" text-anchor="middle">${esc(label)}</text>`;
-  }
-  svg += `<defs><marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="none" stroke="#64748b" stroke-width="1.4"/></marker></defs>`;
-  for (const n of nodes) {
-    svg += `<g class="g-node"><rect x="${n.x}" y="${n.y}" width="${NW}" height="${NH}" rx="9" style="stroke:${n.c}66"/>
-      <circle cx="${n.x + 20}" cy="${n.y + NH / 2}" r="6" fill="${n.c}"/>
-      <text x="${n.x + 34}" y="${n.y + 23}">${esc(n.label)}</text>
-      <text class="g-sub" x="${n.x + 34}" y="${n.y + 38}">${esc(n.sub)}</text></g>`;
-  }
-  svg += `</svg>`;
-  body.innerHTML = `
-    <div class="graph-wrap">${svg}</div>
-    <div class="rel-list card" style="padding:0;overflow:hidden"><table class="data"><thead><tr>
-      <th>Link</th><th>Evidence</th><th>Status</th>
-    </tr></thead><tbody>${rels.map((r) => `
-      <tr><td class="mono">${esc(r.type)}</td><td>${esc(r.evidence)}</td>
-      <td>${r.status === "reconstructed" ? '<span class="check">✓ reconstructed</span>' : '<span class="cross">✕ missing</span>'}</td></tr>`).join("")}
-    </tbody></table></div>`;
-}
-
-function renderInvReport(body) {
-  const s = invCase.scoring || {};
-  const by = s.by_indicator || {};
-  body.innerHTML = `<div class="card report-body">
-    <h2>Executive summary</h2>
-    <p>On 2026-09-28, a finance employee at Northstar Meridian opened a vendor-themed invoice email.
-    The attachment triggered an Office-to-PowerShell process chain, a payload-like executable was written
-    to the user's temp directory, persistence was established via a Registry Run key, and the host
-    contacted test infrastructure over DNS and TLS.</p>
-    <p>All eight defensive tools were run against the synthetic evidence at pinned commits.
-    Every expected indicator was recovered; no benign distractor was elevated.</p>
-    <h2>Ground-truth comparison</h2>
-    <table><tr><th>Indicator</th><th>Recovered</th></tr>
-    ${Object.entries(by).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${v ? '<span class="check">✓</span>' : '<span class="cross">✕</span>'}</td></tr>`).join("")}</table>
-    <h2>Metrics</h2>
-    <ul>
-      <li>Coverage: <b>${s.coverage_pct ?? "—"}%</b> (${s.recovered ?? "—"}/${s.expected_indicators ?? "—"})</li>
-      <li>False positives: <b>${s.false_positives ?? "—"}</b></li>
-      <li>Misses: <b>${(s.misses || []).join(", ") || "none"}</b></li>
-      <li>Engines reporting: <b>${(s.tools_reporting || []).length}</b>/8</li>
-    </ul>
-    <h2>Limitations</h2>
-    <ul>
-      <li>Synthetic evidence: payloads are inert placeholders; network destinations are documentation-range IPs.</li>
-      <li>PhishScope is observation-only by design; verdicts are derived in the scoring layer.</li>
-      <li>HuntForge <span class="mono">detect</span> exits 1 when findings exist (health-gate semantics).</li>
-    </ul>
-  </div>`;
-}
-
-/* ================= Tool page ================= */
+/* ================= Tool workspace ================= */
 async function renderTool(view, crumb, toolId) {
   const t = state.toolMap[toolId];
   if (!t) { view.innerHTML = `<div class="empty">Unknown tool.</div>`; return; }
@@ -261,7 +89,7 @@ async function renderTool(view, crumb, toolId) {
       <div class="dim mono" style="font-size:11px;margin-top:6px;text-align:right">${esc(st.version || "")}</div></div>
     </div>
     <div class="section-title">Actions</div>
-    <div class="section-sub">Run ${esc(t.name)} live against your own input. Nothing leaves this host.</div>
+    <div class="section-sub">Run ${esc(t.name)} against your own input. Nothing leaves this host.</div>
     <div id="actions"></div>`;
 
   const wrap = document.getElementById("actions");

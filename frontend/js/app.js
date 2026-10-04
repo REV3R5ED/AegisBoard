@@ -67,7 +67,6 @@ function navigate() {
   );
   view.scrollTop = 0;
   if (page === "" || page === undefined) return renderDashboard(view, crumb);
-  if (page === "investigation") return renderInvestigation(view, crumb);
   if (page === "tool" && arg) return renderTool(view, crumb, arg);
   view.innerHTML = `<div class="empty"><div class="big">🔍</div>Page not found.</div>`;
 }
@@ -78,9 +77,6 @@ function buildNav() {
     <a class="nav-item" data-route="#/" href="#/">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
       Dashboard</a>
-    <a class="nav-item" data-route="#/investigation" href="#/investigation">
-      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
-      Investigation</a>
     <div class="nav-section">Engines</div>`;
   for (const t of state.tools) {
     html += `<a class="nav-item" data-route="#/tool/${t.id}" href="#/tool/${t.id}">
@@ -102,6 +98,8 @@ async function boot() {
     const online = Object.values(state.status).filter((s) => s.available).length;
     document.getElementById("status-dot").className = `dot ${online === 8 ? "ok" : "pulse"}`;
     document.getElementById("status-text").textContent = `${online}/8 engines online`;
+    const badge = document.getElementById("engine-badge");
+    if (badge) badge.textContent = `${online}/8 engines online`;
   } catch (e) {
     document.getElementById("status-text").textContent = "Backend unreachable";
     toast("Could not reach the AegisBoard backend.", "err");

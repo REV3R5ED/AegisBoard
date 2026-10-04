@@ -14,6 +14,10 @@ A technician opens the site, picks a tool, and uses it — no CLI required.
 | AegisForge | DFIR case management |
 | AutoOPS | Operational validation |
 
+## 🌐 Live demo
+
+**[aegisboard-frontend.vercel.app](https://aegisboard-frontend.vercel.app)** — the dashboard running live in your browser: frontend on Vercel, API on Render, all eight engines online. Pick a tool and run it, no install needed.
+
 ## Run it
 
 ```bash

@@ -1,0 +1,20 @@
+[
+  {
+    "entity": "Finding",
+    "source_tool": "netscope",
+    "source_version": "c8a4b7d",
+    "timestamp": "2026-09-28T09:05:00Z",
+    "confidence": 60,
+    "provenance": {
+      "evidence_ref": "be:artifact:dns",
+      "native_ref": "runners/output/netscope/00-native.json"
+    },
+    "record_kind": "observed",
+    "id": "be:2b737301465a15d4",
+    "title": "Suspicious destination IP (documentation range)",
+    "severity": "medium",
+    "category": "network",
+    "description": "203.0.113.44 is in TEST-NET-3 (documentation); unexpected for workstation traffic",
+    "attack_ids": []
+  }
+]

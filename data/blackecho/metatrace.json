@@ -1,0 +1,36 @@
+[
+  {
+    "entity": "Finding",
+    "source_tool": "metatrace",
+    "source_version": "2206cc4",
+    "timestamp": "2026-09-28T08:10:22Z",
+    "confidence": 70,
+    "provenance": {
+      "evidence_ref": "be:artifact:jpg",
+      "native_ref": "runners/output/metatrace/00-native.json"
+    },
+    "record_kind": "observed",
+    "id": "be:69f41e34b5e2d6d9",
+    "title": "Image carries EXIF metadata",
+    "severity": "info",
+    "category": "forensics",
+    "description": "JPEG contains EXIF (Make/Model/DateTime/Software)",
+    "attack_ids": []
+  },
+  {
+    "entity": "Artifact",
+    "source_tool": "metatrace",
+    "source_version": "2206cc4",
+    "timestamp": "2026-09-28T08:10:22Z",
+    "confidence": 100,
+    "provenance": {
+      "evidence_ref": "be:evidence:jpg",
+      "native_ref": "metatrace/00-native.json"
+    },
+    "record_kind": "observed",
+    "id": "be:artifact:jpg",
+    "path": "evidence/email/invoice-logo.jpg",
+    "sha256": "4b1ea1ae1d6a988a2f83e538ab7b46b4d8c4654afc3d9d4f0601b96dc3fa5b50",
+    "kind": "image"
+  }
+]

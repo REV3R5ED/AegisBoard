@@ -1,0 +1,17 @@
+[
+  {
+    "entity": "Evidence",
+    "source_tool": "aegisforge",
+    "source_version": "34e0505",
+    "timestamp": "2026-09-28T09:20:00Z",
+    "confidence": 100,
+    "provenance": {
+      "evidence_ref": "be:artifact:case",
+      "native_ref": "runners/output/aegisforge/00-native.json"
+    },
+    "record_kind": "observed",
+    "id": "be:evidence:case",
+    "artifact_id": "be:artifact:case",
+    "collected_by": "aegisforge"
+  }
+]

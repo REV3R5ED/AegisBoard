@@ -1,0 +1,47 @@
+[
+  {
+    "entity": "IOC",
+    "source_tool": "sentinelkit",
+    "source_version": "730e211",
+    "timestamp": "2026-09-28T09:20:00Z",
+    "confidence": 75,
+    "provenance": {
+      "evidence_ref": "be:artifact:eml",
+      "native_ref": "runners/output/sentinelkit/00-native.json"
+    },
+    "record_kind": "observed",
+    "id": "be:94cab32fa7b07c52",
+    "ioc_type": "domain",
+    "value": "invoice-portal-updates.example"
+  },
+  {
+    "entity": "IOC",
+    "source_tool": "sentinelkit",
+    "source_version": "730e211",
+    "timestamp": "2026-09-28T09:20:00Z",
+    "confidence": 75,
+    "provenance": {
+      "evidence_ref": "be:artifact:eml",
+      "native_ref": "runners/output/sentinelkit/01-native.json"
+    },
+    "record_kind": "observed",
+    "id": "be:123d8e6c3a96aa56",
+    "ioc_type": "domain",
+    "value": "intranet.northstar-meridian.example"
+  },
+  {
+    "entity": "IOC",
+    "source_tool": "sentinelkit",
+    "source_version": "730e211",
+    "timestamp": "2026-09-28T09:20:00Z",
+    "confidence": 75,
+    "provenance": {
+      "evidence_ref": "be:artifact:eml",
+      "native_ref": "runners/output/sentinelkit/01-native.json"
+    },
+    "record_kind": "observed",
+    "id": "be:6a976149b1abc01e",
+    "ioc_type": "ip",
+    "value": "203.0.113.44"
+  }
+]
